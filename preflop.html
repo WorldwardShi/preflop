@@ -1,0 +1,401 @@
+<title>德扑翻前开池表</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one narrow column — mode tabs, table size, seat pickers, 13×13 grid, legend, notes.
+   Aggressive actions (open / 3-bet) in ruby, calls in felt green. */
+:root{
+  --bg:#f2f4f1; --surface:#ffffff; --fg:#17201b; --muted:#5e6b63; --line:#d6ddd8;
+  --cell:#e6ebe7; --cell-s:#dfe7e2; --cell-o:#eceeea; --cell-fg:#7d8a82;
+  --raise:#b0362f; --raise-fg:#ffffff; --call:#2a7a52; --call-fg:#ffffff;
+  --ink:#1d2a23; --ink-fg:#f2f4f1;
+  --f-display:"Noto Serif SC","Songti SC",serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111613; --surface:#18201c; --fg:#e7ede9; --muted:#9aa8a0; --line:#2b3530;
+  --cell:#1d2622; --cell-s:#1f2a25; --cell-o:#1a211e; --cell-fg:#6f7d75;
+  --raise:#e0685c; --raise-fg:#1a0806; --call:#4fae7f; --call-fg:#06130c;
+  --ink:#e7ede9; --ink-fg:#111613; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#18201c; --fg:#e7ede9; --muted:#9aa8a0; --line:#2b3530;
+  --cell:#1d2622; --cell-s:#1f2a25; --cell-o:#1a211e; --cell-fg:#6f7d75;
+  --raise:#e0685c; --raise-fg:#1a0806; --call:#4fae7f; --call-fg:#06130c;
+  --ink:#e7ede9; --ink-fg:#111613; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);line-height:1.55}
+.wrap{max-width:620px;margin:0 auto;padding-block:24px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-weight:900;font-size:1.9rem;margin:0;line-height:1.2;text-wrap:balance}
+h1 .s{color:var(--raise)}
+.sub{color:var(--muted);margin:4px 0 0;font-size:.92rem}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--line)}
+@media (min-width:600px){.modes{grid-template-columns:repeat(6,1fr)}}
+.modes button{font:inherit;font-size:.9rem;font-weight:500;border:0;background:var(--surface);color:var(--fg);padding:10px 4px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--ink-fg);font-weight:700}
+.lbl{font-size:.75rem;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:.92rem;border:1px solid var(--line);background:var(--surface);color:var(--fg);
+  padding:7px 13px;border-radius:999px;cursor:pointer;min-width:44px}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ink-fg);font-weight:700}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
+button:focus-visible{outline:2px solid var(--raise);outline-offset:2px}
+.seg button small{font-family:var(--f-mono);opacity:.75;margin-left:4px;font-size:.72rem}
+.stat{display:flex;flex-direction:column;gap:4px}
+.stat .pos{font-family:var(--f-display);font-weight:700;font-size:1.2rem;text-wrap:balance}
+.nums{display:flex;flex-wrap:wrap;gap:6px 18px;font-family:var(--f-mono);font-size:.95rem}
+.nums b{font-weight:600;font-size:1.25rem}
+.nums .r{color:var(--raise)} .nums .k{color:var(--call)} .nums .t{color:var(--muted)}
+.gridbox{overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(13,minmax(24px,1fr));gap:2px;min-width:330px}
+.c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);
+  font-weight:500;font-size:clamp(8.5px,2.2vw,12px);border-radius:3px;background:var(--cell-o);color:var(--cell-fg);
+  transition:background .15s,color .15s}
+.c.s{background:var(--cell-s)} .c.p{background:var(--cell)}
+.c.R{background:var(--raise);color:var(--raise-fg);font-weight:600}
+.c.C{background:var(--call);color:var(--call-fg);font-weight:600}
+.c.F{box-shadow:inset 0 0 0 1.5px var(--raise);color:var(--fg)}
+@media (prefers-reduced-motion:reduce){.c{transition:none}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+.notes{font-size:.86rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.notes p{margin:0;max-width:62ch}
+.notes b{color:var(--fg);font-weight:500}
+.empty{padding:14px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:.9rem}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>德扑翻前范围表 <span class="s">♥</span></h1>
+    <p class="sub">100bb 现金局 · 开池 2.5bb（小盲 3bb）</p>
+  </header>
+
+  <div class="modes" id="modes">
+    <button id="m-rfi" data-m="rfi">开池</button>
+    <button id="m-vs" data-m="vs">面对加注</button>
+    <button id="m-bb" data-m="bb">大盲防守</button>
+    <button id="m-f3" data-m="f3">面对3-bet</button>
+    <button id="m-f4" data-m="f4">面对4-bet</button>
+    <button id="m-sq" data-m="sq">挤压</button>
+  </div>
+
+  <section>
+    <div class="lbl">桌子人数</div>
+    <div class="seg" id="tables"></div>
+  </section>
+  <section id="secA">
+    <div class="lbl" id="lblA">位置</div>
+    <div class="seg" id="segA"></div>
+  </section>
+  <section id="secB">
+    <div class="lbl" id="lblB">你的位置</div>
+    <div class="seg" id="segB"></div>
+  </section>
+  <section id="secC" hidden>
+    <div class="lbl" id="lblC">你的位置</div>
+    <div class="seg" id="segC"></div>
+  </section>
+
+  <div class="stat">
+    <div class="pos" id="posName"></div>
+    <div class="nums" id="nums"></div>
+  </div>
+
+  <div class="gridbox"><div class="grid" id="grid" role="img" aria-label="起手牌范围矩阵"></div></div>
+  <div class="legend" id="legend"></div>
+
+  <div class="notes" id="notes"></div>
+</div>
+
+<script>
+const R="AKQJT98765432";
+/* ---------- 开池 RFI，按身后人数分级 ---------- */
+const RFI={
+  UTG8:"66+,A9s+,A5s-A4s,KTs+,QTs+,JTs,T9s,AJo+,KQo",
+  UTG1:"55+,A8s+,A5s-A3s,KTs+,QTs+,JTs,T9s,98s,AJo+,KQo",
+  LJ:"55+,A2s+,K9s+,QTs+,JTs,T9s,98s,87s,76s,65s,ATo+,KJo+",
+  HJ:"33+,A2s+,K8s+,Q9s+,J9s+,T8s+,97s+,87s,76s,65s,ATo+,KTo+,QJo",
+  CO:"22+,A2s+,K5s+,Q8s+,J8s+,T8s+,97s+,86s+,75s+,65s,54s,A8o+,A5o,KTo+,QTo+,JTo",
+  BTN:"22+,A2s+,K2s+,Q4s+,J6s+,T6s+,96s+,85s+,74s+,64s+,53s+,43s,A2o+,K8o+,Q9o+,J9o+,T8o+,98o,87o",
+  SB:"22+,A2s+,K2s+,Q5s+,J7s+,T7s+,97s+,86s+,75s+,64s+,54s,A2o+,K9o+,Q9o+,J9o+,T9o,98o"
+};
+/* ---------- 面对开池：[3-bet, 跟注]，按开池者分组 × 你的位置类型 ---------- */
+const GROUP={UTG8:"E",UTG1:"E",LJ:"M",HJ:"H",CO:"C",BTN:"B",SB:"S"};
+const VS={
+  E:{IP:["QQ+,AKs,AKo,A5s","JJ-99,AQs,AJs,KQs"],
+     BTN:["QQ+,AKs,AKo,A5s,A4s","JJ-66,AQs-ATs,KQs-KJs,QJs,JTs,T9s,AQo"],
+     SB:["JJ+,AQs+,AKo,A5s,KQs",""],
+     BB:["QQ+,AKs,AKo,A5s,A4s","JJ-22,AQs-A6s,A3s-A2s,K8s+,Q8s+,J8s+,T8s+,97s+,86s+,75s+,64s+,54s,53s,AQo-ATo,KJo+,QJo"]},
+  M:{IP:["JJ+,AQs+,AKo,A5s,A4s,KQs","TT-88,AJs,ATs,KJs,QJs,JTs"],
+     BTN:["JJ+,AQs+,AKo,A5s-A3s,KQs","TT-55,AJs-ATs,KJs-KTs,QJs,QTs,JTs,T9s,98s,AQo"],
+     SB:["TT+,AJs+,AQo+,A5s-A4s,KQs,KJs",""],
+     BB:["JJ+,AQs+,AKo,A5s-A3s,KQs","TT-22,AJs-A6s,A2s,K8s+,Q8s+,J8s+,T8s+,97s+,86s+,75s+,65s,54s,AQo-ATo,KJo+,QJo"]},
+  H:{IP:["TT+,AJs+,AQo+,A5s-A3s,KQs,KJs,QJs","99-77,ATs,KTs,QTs,JTs,T9s"],
+     BTN:["TT+,AJs+,AQo+,A5s-A3s,KQs,KJs","99-44,ATs-A6s,KTs-K9s,QTs+,J9s+,T9s,98s,87s,76s,AJo,KQo"],
+     SB:["99+,ATs+,AJo+,A5s-A3s,KTs+,QJs,JTs",""],
+     BB:["TT+,AJs+,AQo+,A5s-A3s,KQs,KJs","99-22,ATs-A6s,A2s,K6s+,Q8s+,J8s+,T7s+,97s+,86s+,75s+,64s+,54s,AJo-A9o,KTo+,QTo+,JTo"]},
+  C:{BTN:["99+,ATs+,AJo+,KQo,A5s-A2s,KTs+,QJs,JTs","88-22,A9s-A6s,K9s,QTs,Q9s,J9s,T9s,98s,87s,76s,65s,ATo,KJo"],
+     SB:["88+,A8s+,ATo+,A5s-A2s,K9s+,Q9s+,J9s+,T9s,KJo+",""],
+     BB:["99+,ATs+,AJo+,KQo,A5s-A3s,KTs+,QJs","88-22,A2s+,K2s+,Q6s+,J7s+,T7s+,96s+,85s+,74s+,63s+,53s+,43s,A7o+,K9o+,Q9o+,J9o+,T9o,98o"]},
+  B:{SB:["77+,A2s+,A9o+,A5o,K9s+,Q9s+,J9s+,T9s,98s,KTo+,QJo",""],
+     BB:["88+,A9s+,A5s-A2s,ATo+,KTs+,QTs+,JTs,KJo+,65s,54s","77-22,A2s+,K2s+,Q2s+,J4s+,T6s+,95s+,85s+,74s+,63s+,52s+,42s+,32s,A2o+,K5o+,Q7o+,J7o+,T7o+,97o+,86o+,76o,65o"]},
+  S:{BB:["77+,A8s+,A5s-A2s,ATo+,K9s+,Q9s+,J9s+,T9s,KJo+,QJo,76s,65s","66-22,A2s+,K2s+,Q2s+,J3s+,T5s+,95s+,84s+,74s+,63s+,52s+,42s+,32s,A2o+,K3o+,Q6o+,J7o+,T7o+,97o+,86o+,75o+,65o,54o"]}
+};
+const NAMES={UTG8:"枪口",UTG1:"枪口+1",LJ:"低位",HJ:"劫位",CO:"关煞位",BTN:"按钮",SB:"小盲",BB:"大盲"};
+const TABLES={
+  8:[["UTG","UTG8"],["UTG+1","UTG1"],["LJ","LJ"],["HJ","HJ"],["CO","CO"],["BTN","BTN"],["SB","SB"]],
+  7:[["UTG","UTG1"],["LJ","LJ"],["HJ","HJ"],["CO","CO"],["BTN","BTN"],["SB","SB"]],
+  6:[["UTG","LJ"],["HJ","HJ"],["CO","CO"],["BTN","BTN"],["SB","SB"]],
+  5:[["UTG","HJ"],["CO","CO"],["BTN","BTN"],["SB","SB"]]
+};
+const ix=c=>R.indexOf(c);
+function expand(str){
+  const set=new Set();if(!str)return set;
+  const add=(a,b,t)=>set.add(a===b?R[a]+R[b]:R[Math.min(a,b)]+R[Math.max(a,b)]+t);
+  for(const tok of str.split(",")){
+    let m;
+    if(m=tok.match(/^(.)\1\+$/)){for(let i=ix(m[1]);i>=0;i--)add(i,i);}
+    else if(m=tok.match(/^(.)\1-(.)\2$/)){for(let i=ix(m[1]);i<=ix(m[2]);i++)add(i,i);}
+    else if(m=tok.match(/^(.)\1$/)){add(ix(m[1]),ix(m[1]));}
+    else if(m=tok.match(/^(.)(.)([so])-(.)(.)[so]$/)){const h=ix(m[1]);for(let k=ix(m[2]);k<=ix(m[5]);k++)add(h,k,m[3]);}
+    else if(m=tok.match(/^(.)(.)([so])\+$/)){const h=ix(m[1]);for(let k=ix(m[2]);k>h;k--)add(h,k,m[3]);}
+    else if(m=tok.match(/^(.)(.)([so])$/)){add(ix(m[1]),ix(m[2]),m[3]);}
+  }
+  return set;
+}
+const RFIS={};for(const k in RFI)RFIS[k]=expand(RFI[k]);
+const combos=h=>h.length===2?6:h[2]==="s"?4:12;
+const cnt=set=>{let n=0;set.forEach(h=>n+=combos(h));return n};
+const pc=n=>(n/1326*100).toFixed(1)+"%";
+function vsSets(openLv,heroType){
+  const [r,c]=VS[GROUP[openLv]][heroType];
+  const R3=expand(r),C=expand(c);R3.forEach(h=>C.delete(h));
+  return [R3,C];
+}
+const heroType=lv=>lv==="BTN"?"BTN":lv==="SB"?"SB":"IP";
+
+/* ---------- 开池后面对 3-bet：[4-bet, 跟注]，按你开池的分组 × 你是否有位置 ---------- */
+const F3={
+  E:{oop:["KK+,AKs,AKo,A5s","QQ-88,AQs-AJs,KQs,KJs,QJs,JTs"],
+     ip:["KK+,AKs,AKo,A5s,A4s","QQ-66,AQs-ATs,KQs-KTs,QJs,QTs,JTs,T9s,AQo"]},
+  M:{oop:["KK+,AKs,AKo,A5s,A4s","QQ-77,AQs-ATs,KQs-KJs,QJs,JTs,T9s,AQo"],
+     ip:["QQ+,AKs,AKo,A5s-A3s","JJ-55,AQs-A9s,KQs-KTs,QJs,QTs,JTs,T9s,98s,87s,AQo"]},
+  H:{oop:["QQ+,AKs,AKo,A5s,A4s","JJ-66,AQs-A9s,KQs-KTs,QJs,QTs,JTs,T9s,98s,AQo"],
+     ip:["QQ+,AKs,AKo,A5s-A3s","JJ-44,AQs-A6s,KQs-K9s,QJs-Q9s,JTs,J9s,T9s,98s,87s,76s,65s,AQo,AJo,KQo"]},
+  C:{oop:["QQ+,AKs,AKo,A5s-A2s","JJ-55,AQs-A7s,KQs-K9s,QJs-Q9s,JTs,J9s,T9s,98s,87s,76s,AQo,AJo,KQo"],
+     ip:["QQ+,AKs,AKo,A5s-A2s,K9s","JJ-33,AQs-A6s,KQs-KTs,QJs-Q9s,JTs,J9s,T9s,T8s,98s,97s,87s,76s,65s,54s,AQo-ATo,KQo,KJo"]},
+  B:{ip:["QQ+,AQs+,AKo,A5s-A2s,K5s-K4s","JJ-22,AJs-A6s,KQs-K6s,QJs-Q8s,JTs-J8s,T9s,T8s,98s,97s,87s,86s,76s,75s,65s,64s,54s,AQo-ATo,KQo-KJo,QJo"]},
+  S:{oop:["QQ+,AQs+,AKo,A5s-A2s,K5s","JJ-33,AJs-A6s,KQs-K8s,QJs-Q9s,JTs,J9s,T9s,T8s,98s,87s,76s,65s,AQo-AJo,KQo,KJo"]}
+};
+function f3Sets(openLv,side){
+  const open=RFIS[openLv],[r,c]=F3[GROUP[openLv]][side];
+  const R4=expand(r),C=expand(c);
+  [...R4].forEach(h=>{if(!open.has(h))R4.delete(h)});
+  [...C].forEach(h=>{if(!open.has(h)||R4.has(h))C.delete(h)});
+  const F=new Set([...open].filter(h=>!R4.has(h)&&!C.has(h)));
+  return [R4,C,F,open];
+}
+
+/* ---------- 3-bet 后面对 4-bet：[5-bet 全下, 跟注]，按开池者分组 × 你是否有位置 ---------- */
+const F4={
+  E:{ip:["KK+,AKs","QQ,AKo"], oop:["KK+,AKs","QQ,AKo"]},
+  M:{ip:["KK+,AKs","QQ-JJ,AKo,AQs"], oop:["KK+,AKs,AKo","QQ"]},
+  H:{ip:["QQ+,AKs,AKo","JJ-TT,AQs,AJs,KQs"], oop:["QQ+,AKs,AKo","JJ,AQs"]},
+  C:{ip:["QQ+,AKs,AKo","JJ-99,AQs-AJs,KQs"], oop:["QQ+,AKs,AKo","JJ-TT,AQs,KQs"]},
+  B:{oop:["JJ+,AQs+,AKo","TT-99,AJs,KQs,KJs"]},
+  S:{ip:["JJ+,AQs+,AKo","TT-77,AJs-ATs,KQs-KJs,QJs,JTs,AQo"]}
+};
+function f4Sets(openLv,heroKey,side){
+  const R3=vsSets(openLv,heroKey)[0],[a,b]=F4[GROUP[openLv]][side];
+  const J=expand(a),C=expand(b);
+  [...J].forEach(h=>{if(!R3.has(h))J.delete(h)});
+  [...C].forEach(h=>{if(!R3.has(h)||J.has(h))C.delete(h)});
+  const F=new Set([...R3].filter(h=>!J.has(h)&&!C.has(h)));
+  return [J,C,F,R3];
+}
+/* ---------- 挤压：一人开池、一人跟注后轮到你：[挤压, 跟注] ---------- */
+const SQ={
+  E:{IP:["QQ+,AKs,AKo,A5s","JJ-99,AQs,KQs"],
+     BTN:["QQ+,AKs,AKo,A5s","JJ-77,AQs,AJs,KQs,QJs,JTs,T9s"],
+     SB:["QQ+,AKs,AKo,A5s","JJ-99,AQs"],
+     BB:["QQ+,AKs,AKo,A5s","JJ-22,AQs-A2s,KTs+,QTs+,J9s+,T9s,98s,87s,76s,65s,54s,AQo,KQo"]},
+  M:{IP:["QQ+,AKs,AKo,A5s,A4s","JJ-99,AQs,AJs,KQs"],
+     BTN:["QQ+,AKs,AKo,A5s,A4s","JJ-66,AQs-ATs,KQs,KJs,QJs,JTs,T9s,98s"],
+     SB:["JJ+,AQs+,AKo,A5s,A4s","TT-88,AJs,KQs"],
+     BB:["QQ+,AKs,AKo,A5s,A4s","JJ-22,AQs-A2s,K9s+,Q9s+,J9s+,T8s+,98s,87s,76s,65s,54s,AQo,AJo,KQo"]},
+  H:{IP:["JJ+,AQs+,AKo,A5s,A4s","TT-88,AJs,KQs,QJs,JTs"],
+     BTN:["JJ+,AQs+,AKo,A5s,A4s,KQs","TT-55,AJs-ATs,KJs,QJs,JTs,T9s,98s,87s"],
+     SB:["TT+,AJs+,AQo+,A5s,A4s,KQs","99-77,KJs,QJs"],
+     BB:["JJ+,AQs+,AKo,A5s-A3s,KQs","TT-22,AJs-A2s,K9s+,Q9s+,J9s+,T8s+,98s,87s,76s,65s,54s,AJo+,KQo"]},
+  C:{SB:["TT+,AJs+,AQo+,A5s-A3s,KJs+,QJs","99-66,ATs,KTs,QTs,JTs,T9s"],
+     BB:["TT+,AJs+,AQo+,A5s-A3s,KQs,KJs","99-22,ATs-A2s,K8s+,Q9s+,J8s+,T8s+,97s+,86s+,76s,65s,54s,ATo+,KJo+,QJo"]},
+  B:{BB:["99+,ATs+,AJo+,A5s-A2s,KTs+,QJs","88-22,A9s-A6s,K5s+,Q8s+,J8s+,T7s+,97s+,86s+,75s+,65s,54s,ATo,KTo+,QTo+,JTo"]}
+};
+function sqSets(openLv,heroKey){
+  const [r,c]=SQ[GROUP[openLv]][heroKey];
+  const S=expand(r),C=expand(c);S.forEach(h=>C.delete(h));
+  return [S,C];
+}
+
+/* ---------- state ---------- */
+let mode="rfi",table=6,seat=0,opener=0,hero=1,bbOpen=0,f3Open=0,f3By=0,f4Open=0,f4Hero=0,sqOpen=0,sqCall=0,sqHero=0;
+const $=id=>document.getElementById(id);
+const grid=$("grid"),cells=[];
+for(let i=0;i<13;i++)for(let j=0;j<13;j++){
+  const h=i===j?R[i]+R[j]:i<j?R[i]+R[j]+"s":R[j]+R[i]+"o";
+  const d=document.createElement("div");d.className="c "+(i===j?"p":i<j?"s":"o");d.textContent=h;d.dataset.h=h;
+  grid.appendChild(d);cells.push(d);
+}
+document.querySelectorAll("#modes button").forEach(b=>b.onclick=()=>{mode=b.dataset.m;render()});
+function btn(parent,id,html,pressed,fn,disabled){
+  const b=document.createElement("button");b.id=id;b.innerHTML=html;b.setAttribute("aria-pressed",pressed);
+  if(disabled)b.disabled=true;b.onclick=fn;parent.appendChild(b);return b;
+}
+function shade(rank,total){
+  const p=Math.round(100-rank*(70/Math.max(1,total-1)));
+  return `color-mix(in oklch, var(--raise) ${p}%, var(--cell))`;
+}
+function paint(R3,C,F){
+  cells.forEach(c=>{c.style.background="";c.style.color="";const h=c.dataset.h;
+    c.classList.toggle("F",!!F&&F.has(h));
+    c.classList.toggle("R",R3.has(h));c.classList.toggle("C",!!C&&C.has(h)&&!R3.has(h));});
+}
+const NOTES={
+  rfi:`<p><b>读表方法：</b>右上三角是同花（s），左下三角是不同花（o），对角线是对子。红色格子加注开池，其余弃牌。</p>
+       <p><b>为什么不同人数共用一套范围：</b>开池范围主要看身后还剩几个人。6 人桌 UTG 身后有 5 人，和 8 人桌 LJ 一样，所以范围相同。“全部叠加”里颜色越深，表示越早的位置就能开。</p>
+       <p><b>小盲：</b>按“加注或弃牌”简化。大盲前面全弃即赢下底池，没有开池范围。</p>`,
+  vs:`<p><b>场景：</b>前面只有一人开池（2.5bb），其他人弃牌，轮到你。红色 3-bet，绿色跟注，其余弃牌。</p>
+      <p><b>3-bet 尺度：</b>有位置约开池的 3 倍（7.5bb），小盲没位置打 3.5–4 倍（9–11bb）。</p>
+      <p><b>为什么小盲几乎不跟注：</b>小盲跟注后翻后没位置，而且身后的大盲还能挤压，所以按“3-bet 或弃牌”打。按钮翻后一定有位置，跟注范围最宽。</p>
+      <p><b>A5s、A4s 这类牌：</b>它们是 3-bet 诈唬，带 A 阻挡对手的强牌，被 4-bet 时可以放心弃掉。</p>`,
+  bb:`<p><b>场景：</b>只有一人开池（2.5bb），其他人都弃牌，你在大盲。红色 3-bet，绿色跟注，其余弃牌。</p>
+      <p><b>为什么大盲防守这么宽：</b>你已投入 1bb，跟注只需再补 1.5bb，就能看到约 5.5bb 的底池，底池赔率很好，而且没人在你身后行动。</p>
+      <p><b>3-bet 尺度：</b>大盲没位置，打开池的 3.5–4 倍左右（9–11bb）。面对小盲开池时，小盲开得最宽，所以大盲反击也最多。</p>
+      <p><b>注意：</b>如果前面还有人跟注（多人底池），防守范围要比表里收紧。</p>`,
+  f3:`<p><b>场景：</b>你按“开池”表加注，后面有一人 3-bet，其他人弃牌，又轮到你。红色 4-bet，绿色跟注；红框表示开过池但现在弃掉的牌，比例按你的开池范围计算。</p>
+      <p><b>有没有位置差别很大：</b>被大小盲 3-bet 时你翻后有位置，可以多跟；被身后非盲位 3-bet 时你没位置，跟注要收紧，更偏向“4-bet 或弃牌”。</p>
+      <p><b>尺度假设：</b>对手 3-bet 有位置约 7.5bb、没位置约 10bb。你的 4-bet 约 22–25bb，没位置时稍大。</p>
+      <p><b>A5s–A2s 4-bet：</b>它们是 4-bet 诈唬，带 A 让对手更难有 AA/AK，被 5-bet 全下时直接弃牌。</p>
+      <p><b>为什么只能选身后的人：</b>你能开池，说明前面的人都已弃牌，所以 3-bet 只可能来自你身后的位置和大小盲。如果前面有人先平跟（limp），你加注后他再反加，这叫 limp 后再加注，不适用本表。这种情况通常代表 AA、KK 这类强牌，一般只用 QQ+、AK 继续，其余弃牌。</p>`,
+  f4:`<p><b>场景：</b>有人开池，你按“面对加注”或“大盲防守”表 3-bet，开池者 4-bet，其他人弃牌，又轮到你。红色 5-bet 全下，绿色跟注；红框是你 3-bet 过但现在弃掉的牌，比例按你的 3-bet 范围计算。</p>
+      <p><b>尺度假设：</b>对手 4-bet 约 22–25bb。100bb 时 5-bet 基本就是全下，所以没有“小 5-bet”这个选项。</p>
+      <p><b>为什么诈唬牌全弃：</b>A5s 这类 3-bet 诈唬碰到 4-bet 就完成了任务，继续投入不划算。开池位置越靠前，对手 4-bet 越紧，你能继续的牌也越少，面对枪口通常只剩 QQ+、AK。</p>
+      <p><b>有位置的区别：</b>有位置时可以多用 JJ、TT、AQs 这类牌跟注，没位置时更偏向全下或弃牌。</p>`,
+  sq:`<p><b>场景：</b>一人开池、一人跟注，其他人弃牌，轮到你。挤压（squeeze）就是这时候的 3-bet。红色挤压，绿色跟注，其余弃牌。</p>
+      <p><b>为什么比普通 3-bet 紧：</b>你要面对两个人，被 4-bet 或被跟注的可能更大，所以价值牌要更强。好处是跟注者的范围通常不含 AA、KK（他们会 3-bet），所以挤压成功率不低。</p>
+      <p><b>尺度假设：</b>挤压约为开池的 4 倍再加每个跟注者 1 份开池额（2.5bb 开池、一人跟注时约 12–13bb），没位置时再大一点。</p>
+      <p><b>跟注范围：</b>多人底池里同花连张、小对子这类能中大牌的牌更值钱，所以跟注范围偏向它们，大盲凭底池赔率能跟得最宽。</p>`
+};
+const COMMON=`<p><b>适用边界：</b>这是接近求解器结论的简化版，真实解里很多手牌是混合打法（部分概率 3-bet、部分跟注），这里取了主要选项。抽水高、对手松或筹码深度不同时需要调整。</p>`;
+
+function render(){
+  document.querySelectorAll("#modes button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===mode));
+  const seats=TABLES[table];
+  $("tables").innerHTML="";
+  [5,6,7,8].forEach(n=>btn($("tables"),"t"+n,n+"人",n===table,()=>{table=n;seat=0;opener=0;hero=1;bbOpen=0;f3Open=0;f3By=0;f4Open=0;f4Hero=0;sqOpen=0;sqCall=0;sqHero=0;render()}));
+  const A=$("segA"),B=$("segB"),Cc=$("segC");A.innerHTML="";B.innerHTML="";Cc.innerHTML="";$("secC").hidden=true;
+  const lg=$("legend");lg.innerHTML="";
+  $("notes").innerHTML=NOTES[mode]+COMMON;
+  const L={R:'<span><i style="background:var(--raise)"></i>',C:'<span><i style="background:var(--call)"></i>',F:'<span><i style="background:var(--cell-s)"></i>'};
+
+  if(mode==="rfi"){
+    $("lblA").textContent="位置";$("secB").hidden=true;cells.forEach(c=>c.classList.remove("F"));
+    seats.forEach(([lab,lv],k)=>btn(A,"s"+k,lab+"<small>"+pc(cnt(RFIS[lv]))+"</small>",k===seat,()=>{seat=k;render()}));
+    btn(A,"sall","全部叠加",seat===-1,()=>{seat=-1;render()});
+    if(seat>=0){
+      const [lab,lv]=seats[seat],S=RFIS[lv];
+      $("posName").textContent=lab+" · "+NAMES[lv]+"（身后 "+(seats.length-seat)+" 人）";
+      $("nums").innerHTML=`<span class="r"><b>${pc(cnt(S))}</b> 开池</span><span class="t">${cnt(S)} 组合</span>`;
+      paint(S,null,null);
+      lg.innerHTML=L.R+"加注</span>"+L.F+"弃牌</span>";
+    }else{
+      $("posName").textContent=table+" 人桌 · 各位置叠加";$("nums").innerHTML="";
+      cells.forEach(c=>{c.classList.remove("R","C");
+        const k=seats.findIndex(([,lv])=>RFIS[lv].has(c.dataset.h));
+        if(k<0){c.style.background="";c.style.color="";}
+        else{c.style.background=shade(k,seats.length);c.style.color=k<seats.length/2?"var(--raise-fg)":"var(--fg)";}});
+      seats.forEach(([lab],k)=>{const s=document.createElement("span");
+        s.innerHTML=`<i style="background:${shade(k,seats.length)}"></i>${lab} 起`;lg.appendChild(s)});
+    }
+  }else if(mode==="vs"){
+    $("lblA").textContent="谁开池";$("lblB").textContent="你的位置";$("secB").hidden=false;
+    const openers=seats.slice(0,-1); // SB 开池只剩大盲，见“大盲防守”
+    if(opener>=openers.length)opener=0;
+    openers.forEach(([lab],k)=>btn(A,"o"+k,lab,k===opener,()=>{opener=k;if(hero<=k)hero=k+1;render()}));
+    if(hero<=opener||hero>=seats.length)hero=opener+1;
+    seats.forEach(([lab],k)=>{if(k===0)return;btn(B,"h"+k,lab,k===hero,()=>{hero=k;render()},k<=opener)});
+    const [oLab,oLv]=seats[opener],[hLab,hLv]=seats[hero];
+    const [R3,C]=vsSets(oLv,heroType(hLv));
+    $("posName").textContent=`${hLab} 面对 ${oLab} 开池`;
+    const r=cnt(R3),c=cnt(C);
+    $("nums").innerHTML=`<span class="r"><b>${pc(r)}</b> 3-bet</span><span class="k"><b>${pc(c)}</b> 跟注</span><span class="t">共 ${pc(r+c)} 继续</span>`;
+    paint(R3,C,null);
+    lg.innerHTML=L.R+"3-bet</span>"+L.C+"跟注</span>"+L.F+"弃牌</span>";
+  }else if(mode==="f3"){
+    $("lblA").textContent="你在哪开池";$("lblB").textContent="谁 3-bet";$("secB").hidden=false;
+    if(f3Open>=seats.length)f3Open=0;
+    seats.forEach(([lab],k)=>btn(A,"f"+k,lab,k===f3Open,()=>{f3Open=k;f3By=0;render()}));
+    const by=seats.slice(f3Open+1).map(x=>x[0]).concat(["BB"]);
+    if(f3By>=by.length)f3By=0;
+    by.forEach((lab,k)=>btn(B,"g"+k,lab,k===f3By,()=>{f3By=k;render()}));
+    const [oLab,oLv]=seats[f3Open],byLab=by[f3By];
+    const side=(oLv!=="SB"&&(byLab==="SB"||byLab==="BB"))?"ip":"oop";
+    const [R4,C,F,open]=f3Sets(oLv,side);
+    $("posName").textContent=`${oLab} 开池，被 ${byLab} 3-bet（你${side==="ip"?"有位置":"没位置"}）`;
+    const o=cnt(open),r=cnt(R4),c=cnt(C),q=n=>(n/o*100).toFixed(0)+"%";
+    $("nums").innerHTML=`<span class="r"><b>${q(r)}</b> 4-bet</span><span class="k"><b>${q(c)}</b> 跟注</span><span class="t">${q(o-r-c)} 弃牌（占开池范围）</span>`;
+    paint(R4,C,F);
+    lg.innerHTML=L.R+"4-bet</span>"+L.C+"跟注</span>"+'<span><i style="box-shadow:inset 0 0 0 1.5px var(--raise)"></i>'+"开过池但弃牌</span>"+L.F+"本来就不开</span>";
+  }else if(mode==="f4"){
+    $("lblA").textContent="谁开池";$("lblB").textContent="你在哪 3-bet";$("secB").hidden=false;
+    if(f4Open>=seats.length)f4Open=0;
+    seats.forEach(([lab],k)=>btn(A,"p"+k,lab,k===f4Open,()=>{f4Open=k;f4Hero=0;render()}));
+    const heroes=seats.slice(f4Open+1).map(x=>x[0]).concat(["BB"]);
+    if(f4Hero>=heroes.length)f4Hero=0;
+    heroes.forEach((lab,k)=>btn(B,"q"+k,lab,k===f4Hero,()=>{f4Hero=k;render()}));
+    const [oLab,oLv]=seats[f4Open],hLab=heroes[f4Hero];
+    const hKey=hLab==="BB"?"BB":heroType(seats.find(x=>x[0]===hLab)[1]);
+    const side=oLv==="SB"?"ip":(hKey==="SB"||hKey==="BB")?"oop":"ip";
+    const [J,C,F,R3]=f4Sets(oLv,hKey,side);
+    $("posName").textContent=`${hLab} 3-bet ${oLab}，被 4-bet（你${side==="ip"?"有位置":"没位置"}）`;
+    const o=cnt(R3),r=cnt(J),c=cnt(C),q=n=>(n/o*100).toFixed(0)+"%";
+    $("nums").innerHTML=`<span class="r"><b>${q(r)}</b> 5-bet 全下</span><span class="k"><b>${q(c)}</b> 跟注</span><span class="t">${q(o-r-c)} 弃牌（占 3-bet 范围）</span>`;
+    paint(J,C,F);
+    lg.innerHTML=L.R+"5-bet 全下</span>"+L.C+"跟注</span>"+'<span><i style="box-shadow:inset 0 0 0 1.5px var(--raise)"></i>'+"3-bet 过但弃牌</span>"+L.F+"本来就不 3-bet</span>";
+  }else if(mode==="sq"){
+    $("lblA").textContent="谁开池";$("lblB").textContent="谁跟注";$("lblC").textContent="你的位置";
+    $("secB").hidden=false;$("secC").hidden=false;
+    const openers=seats.slice(0,-1); // 至少要留一个跟注者和你
+    if(sqOpen>=openers.length)sqOpen=0;
+    openers.forEach(([lab],k)=>btn(A,"x"+k,lab,k===sqOpen,()=>{sqOpen=k;sqCall=0;sqHero=0;render()}));
+    const callers=seats.slice(sqOpen+1);
+    if(sqCall>=callers.length)sqCall=0;
+    callers.forEach(([lab],k)=>btn(B,"y"+k,lab,k===sqCall,()=>{sqCall=k;sqHero=0;render()}));
+    const ci=sqOpen+1+sqCall;
+    const heroes=seats.slice(ci+1).map(x=>x[0]).concat(["BB"]);
+    if(sqHero>=heroes.length)sqHero=0;
+    heroes.forEach((lab,k)=>btn(Cc,"z"+k,lab,k===sqHero,()=>{sqHero=k;render()}));
+    const [oLab,oLv]=seats[sqOpen],cLab=seats[ci][0],hLab=heroes[sqHero];
+    const hKey=hLab==="BB"?"BB":heroType(seats.find(x=>x[0]===hLab)[1]);
+    const [S,C]=sqSets(oLv,hKey);
+    $("posName").textContent=`${oLab} 开池，${cLab} 跟注，轮到 ${hLab}`;
+    const r=cnt(S),c=cnt(C);
+    $("nums").innerHTML=`<span class="r"><b>${pc(r)}</b> 挤压</span><span class="k"><b>${pc(c)}</b> 跟注</span><span class="t">共 ${pc(r+c)} 继续</span>`;
+    paint(S,C,null);
+    lg.innerHTML=L.R+"挤压</span>"+L.C+"跟注</span>"+L.F+"弃牌</span>";
+  }else{
+    $("lblA").textContent="谁开池";$("secB").hidden=true;
+    if(bbOpen>=seats.length)bbOpen=0;
+    seats.forEach(([lab],k)=>btn(A,"b"+k,lab,k===bbOpen,()=>{bbOpen=k;render()}));
+    const [oLab,oLv]=seats[bbOpen];
+    const [R3,C]=vsSets(oLv,"BB");
+    $("posName").textContent=`大盲 面对 ${oLab} 开池`;
+    const r=cnt(R3),c=cnt(C);
+    $("nums").innerHTML=`<span class="r"><b>${pc(r)}</b> 3-bet</span><span class="k"><b>${pc(c)}</b> 跟注</span><span class="t">共 ${pc(r+c)} 防守</span>`;
+    paint(R3,C);
+    lg.innerHTML=L.R+"3-bet</span>"+L.C+"跟注</span>"+L.F+"弃牌</span>";
+  }
+}
+render();
+</script>
